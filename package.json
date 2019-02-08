@@ -1,0 +1,32 @@
+{
+  "name": "heroapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pisipisi/heroapi.git"
+  },
+  "author": "Thanh Nguyen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pisipisi/heroapi/issues"
+  },
+  "homepage": "https://github.com/pisipisi/heroapi#readme",
+  "devDependencies": {
+    "nodemon": "^1.18.9"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "express": "^4.16.4",
+    "jsonwebtoken": "^8.4.0",
+    "mysql": "^2.16.0",
+    "rand-token": "^0.4.0",
+    "socket.io": "^2.2.0"
+  }
+}
