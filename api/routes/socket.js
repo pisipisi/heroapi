@@ -6,10 +6,23 @@ module.exports = function(app, io) {
     io.on('connection', function(socket) {
         console.log('connected!', socket.id);
 
-        socket.on('disconnect', function(socket){
+        socket.on('disconnect',async function(){
             for(var i = helpers.length - 1; i > -1 ; i-- ) {           
                 if(helpers[i].socketid == socket.id)
                     helpers.splice(i, 1);
+                    break;
+            }
+            if(helps) {
+                for (var i = 0; i < helps.length; i++) {
+                    var obj = helps[i];
+                    if (obj.id==socket.id) {
+                        await pool.query("UPDATE helps SET active=0 WHERE room=?", [obj.room]);
+                        socket.to(obj.room).emit('help-canceled', socket.id);
+                        helps.splice(i, 1);
+                        socket.leave(obj.room);
+                        break;
+                    }
+                }
             }
             io.emit('users-changed', {user: socket.nickname, event: 'left'});   
         });
@@ -19,8 +32,8 @@ module.exports = function(app, io) {
             socket.helperid = helper.id;
             helper.socketid = socket.id;
             helpers.push(helper);
-            console.log(helper);
-            let sql = "SELECT * FROM helps WHERE helper IS NULL LIMIT 1;UPDATE users SET lat=?, lng=? WHERE id=?";
+            console.log("helper ",helper);
+            let sql = "SELECT * FROM helps WHERE active=1 AND helper IS NULL LIMIT 1;UPDATE users SET lat=?, lng=? WHERE id=?";
             try {
                 let result = await pool.query(sql, [helper.location.lat, helper.location.lng, helper.id]);
                 if(result[0].length > 0) {
@@ -36,8 +49,8 @@ module.exports = function(app, io) {
                     dist = dist / 1.609344;
                     if(dist < 30) {
                         help.distance = dist;
-                        console.log(help);
-                        io.to(`${socket.id}`).emit('help-send', help);
+                        console.log("help send:", help);
+                        socket.emit('help-send', help);
                     }
                 }
             } catch (err) {
@@ -51,7 +64,7 @@ module.exports = function(app, io) {
         });
 
         socket.on('create-help', async (help) => {
-            if(!socket.helps) socket.helps = [];
+            console.log("create help", help)
             help.id = socket.id
             help.room = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
             helps.push(help);
@@ -79,7 +92,7 @@ module.exports = function(app, io) {
                     help.note = data.note;
                     help.phone = data.phone;
                     console.log(data);
-                    io.to(`${helpers[i].socketid}`).emit('help-send', help);
+                    socket.emit('help-send', help);
                 }
             }
 
@@ -99,7 +112,7 @@ module.exports = function(app, io) {
                 }
                 socket.join(room);
             } else {
-                io.to(`${socket.id}`).emit('help-already', help);
+                socket.emit('help-already', help);
             }
             
         });
@@ -109,17 +122,27 @@ module.exports = function(app, io) {
             socket.to(room).emit('helper-left', socket.id);
         });
 
-        socket.on('cancel-help', (cancel) => {
+        socket.on('helper-location', async (location) => {
+            console.log(location);
+            try {
+                await pool.query("UPDATE users SET lat=?, lng=? WHERE id=?", [location.lat, location.lng, socket.helperid]);
+            } catch (err) {
+                console.log(err);
+            }
+            io.emit('hero-location', location);    
+        });
+
+        socket.on('cancel-help',async (cancel) => {
             console.log(cancel);
-            if(cancel && socket.helps) {
+            if(cancel && helps) {
                 for (var i = 0; i < helps.length; i++) {
-                    var obj = socket.helps[i];
-                
+                    var obj = helps[i];
+                    console.log(obj);
                     if (obj.id===socket.id) {
-                        socket.leave(obj.room);
-                        console.log(obj.room);
+                        await pool.query("UPDATE helps SET active=0 WHERE room=?", [obj.room]);
                         socket.to(obj.room).emit('help-canceled', socket.id);
                         helps.splice(i, 1);
+                        socket.leave(obj.room);
                         break;
                     }
                 }
