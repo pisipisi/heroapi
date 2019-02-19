@@ -32,6 +32,23 @@ router.post('/fblogin', async function(req, res, next) {
         res.status(404).json({code: 404, error: null, message: "Thanks for register, please wait for the approval.", new: true});
     }
 });
+
+router.post('/update-token', VerifyToken,  async function(req, res, next) {
+    let sql = "UPDATE users SET firebase_token=? WHERE id=?";
+    try {
+        let results = await pool.query(sql, [req.body.token, req.id]);
+        if(results) {
+            console.log(results);
+            res.status(200).json(results);
+        } else {
+            next();
+        }
+
+    } catch (err) {
+        next(err);
+    }
+});
+
 router.post('/login', async function(req, res, next) {
     try {
         let sql = "SELECT id, email, password FROM users WHERE email=?";
